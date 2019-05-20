@@ -41,7 +41,7 @@
         border-right: 0;
     }
 
-    .status {
+    .selesai {
         display: none;
         width: 200px;
         top: 120px;
@@ -56,6 +56,7 @@
         color: white;
         font-size: 2em;
     }
+    
 </style>
 <body>
     <table>
@@ -82,6 +83,7 @@
 </body>
 <!-- <script src="script.js"></script> -->
 <script>
+    console.log(document.querySelector(".selesai .text"));
     var board;
     var player='X';
     var aiplayer='O';
@@ -101,26 +103,28 @@
         board = Array.from(Array(9).keys());//buat array yang berisi dari 0-9
         for (var i = 0; i < cells.length; i++) {
             cells[i].innerText = '';//kosongkan setiap cell
-            //cells[i].style.removeProperty('background-color'); //hapus background-color setelah hightlight combo  
+            cells[i].style.removeProperty('background-color'); //hapus background-color setelah hightlight combo  
             cells[i].addEventListener('click', turnClick, false);
 	    }
     }
     play();
 
     function turnClick(cell){
-        turn(cell.target.id,player);
+        if(typeof board[cell.target.id]=='number'){//jika cell dengan id n belum diklik maka lakukan ...
+            turn(cell.target.id,player);
+            if(!checkTie())turn(bestSpot(),aiplayer); //jika tidak seri,aiplayer ambil giliran
+        }
     }
-    function turn(idcell, player) {
-        board[idcell] = player;
-        document.getElementById(idcell).innerText = player;
-        let gameWon = checkWin(board, player)
+    function turn(idcell, p) {
+        board[idcell] = p;
+        document.getElementById(idcell).innerText = p;
+        let gameWon = checkWin(board, p)
         if(gameWon)gameOver(gameWon)
     }
     function checkWin(board, player) {
 	let plays =board.reduce((a, e, i) =>//reduce cari setiap index dari suatu array
         (e === player) ? a.concat(i) : a, []); //array.reduce(function(total, currentValue, currentIndex, arr), initialValue)
     let gameWon = null;
-  
         for (let [index, win] of winSituation.entries()) {//entries akses index dan value di dalam for-of
             if (win.every(elem => plays.indexOf(elem) > -1)) {
                 gameWon = {index: index, player: player};
@@ -129,6 +133,17 @@
         }
         return gameWon;
     }
+    function gameOver(gameWon) {
+	for (let index of winSituation[gameWon.index]) {//kasih background ke box situasi menang
+		document.getElementById(index).style.backgroundColor =
+			gameWon.player == player ? "blue" : "red";
+	}
+	for (var i = 0; i < cells.length; i++) {
+		cells[i].removeEventListener('click', turnClick, false);//disable clickable
+	}
+	declareWinner(gameWon.player == player ? "Kamu menang!" : "You lose.");
+    }
+    
     // function t(a,e,i){
     //     if(e===player){
     //         return a.concat(i)
@@ -137,5 +152,76 @@
     //         return a
     //     }
     // }
+    function declareWinner(p){
+        document.querySelector(".selesai").style.display="block";
+        document.querySelector(".selesai .text").innerHTML=p;
+    }
+    function emptyCells(){
+        return board.filter(s=>typeof s=='number'); //filter setiap elemen
+    }
+    function bestSpot(){
+        return minimax(board,aiplayer).index;
+    }
+    function checkTie(){
+        if(emptyCells().length==0)
+        {//jika semua cell terisi kasih warna hijau dan disable click
+            for (let i = 0; i < cells.length; i++) {
+                cells[i].style.backgroundColor="green";
+                cells[i].removeEventListener('click',turnClick,false);
+                
+            }
+            declareWinner("Seri");
+            return true
+        }
+        return false;
+    }
+    function minimax(newBoard,p){
+        var avSpots=emptyCells(newBoard);
+        if(checkWin(newBoard,p ))
+        {
+            return {score:-10};
+        }else if(checkWin(newBoard,aiplayer)){
+            return {score:20};
+        }else if(avSpots.length===0){
+            return {score:0};
+        }
+        var moves=[];
+        for (let i = 0; i < avSpots.length; i++) {
+            var move={};
+            move.index=newBoard[avSpots[i]];
+            newBoard[avSpots[i]]=p;
+
+            if(p==aiplayer){
+                var result=minimax(newBoard,player);
+                move.score=result.score;
+            }else{
+                var result=minimax(newBoard,aiplayer);
+                move.score=result.score;
+            }
+            newBoard[avSpots[i]]=move.index;
+            moves.push(move);  
+        }
+        var bestMove;
+        if(p === aiplayer) {
+            var bestScore = -10000;
+            for(var i = 0; i < moves.length; i++) {
+                if (moves[i].score > bestScore) {
+                    bestScore = moves[i].score;
+                    bestMove = i;
+                }
+            }
+        } else {
+            var bestScore = 10000;
+            for(var i = 0; i < moves.length; i++) {
+                if (moves[i].score < bestScore) {
+                    bestScore = moves[i].score;
+                    bestMove = i;
+                }
+            }
+        }
+
+        return moves[bestMove];
+
+    }
 </script>
 </html>
